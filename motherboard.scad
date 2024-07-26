@@ -72,8 +72,8 @@ module motherboard_miniitx(show_keepouts, socket_holes, socket) {
     }
     
     // Keepouts for visualization purposes
-    color("GreenYellow", 0.25) {
-        if (show_keepouts == true) {
+    if (show_keepouts == true) {
+         color("GreenYellow", 0.25) {
             translate([0, 0, -miniitx_bottom_keepout]) cube([miniitx[0], miniitx[1], miniitx_bottom_keepout]);
             
             for (keepout = [area_a_keepout, area_b_keepout, area_c_keepout, area_d_keepout]) {

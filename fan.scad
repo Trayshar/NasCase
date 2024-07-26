@@ -31,7 +31,6 @@ module fan(size, thickness, blades) {
     // Center at base of exhaust side is datum
     $fn = 50;
     fan_wall = 1;
-    hole_spacing = hole_spacing(size);
     
     color("DarkSlateGray", 1.0) {
         difference() {
@@ -41,9 +40,12 @@ module fan(size, thickness, blades) {
             translate([0, 0, -extra/2]) cylinder(r = size/2-fan_wall, h = thickness + extra);
             
             // Holes for the fan screws
-            for (x = [-hole_spacing/2, hole_spacing/2]) {
-                for (y = [-hole_spacing/2, hole_spacing/2]) {
-                    translate([x, y, -extra/2]) cylinder(r = fan_screw_r/2, h = thickness+extra);
+            hole_spacing = hole_spacing(size);
+            if (!is_undef(hole_spacing)) { // Might be undefined if used for an integrated fan
+                for (x = [-hole_spacing/2, hole_spacing/2]) {
+                    for (y = [-hole_spacing/2, hole_spacing/2]) {
+                        translate([x, y, -extra/2]) cylinder(r = fan_screw_r/2, h = thickness+extra);
+                    }
                 }
             }
         }
