@@ -7,6 +7,7 @@
 // Motherboard modules
 
 include <defaults.scad>;
+include <pcie.scad>;
 
 // Base PCB dimensions
 miniitx = [170, 170, pcb_thickness];
@@ -68,7 +69,7 @@ module motherboard_miniitx(show_keepouts, socket_holes, socket) {
     
     // PCI-e slot
     color("DarkSlateGray", 1.0) {
-        translate([pci_e_offset[0]-14.5, pci_e_offset[1]-7.5/2, miniitx[2]]) cube([89.0, 7.5, 11.25]);
+        translate([pci_e_offset[0], pci_e_offset[1], miniitx[2]]) pcie_slot_x(1);
     }
     
     // Keepouts for visualization purposes
@@ -99,5 +100,9 @@ module motherboard_back_panel_cutout() {
     }
 }
 
-//motherboard_miniitx(false, am4_holes, am4_socket);
-//% motherboard_back_panel_cutout();
+// motherboard_miniitx(false, am4_holes, am4_socket);
+// translate(pci_e_offset) {
+//     pcie_card(pcb_length=72.5, pcb_height=50, low_profile=true, pcie_length=1, num_brackets=1);
+// }
+
+// % motherboard_back_panel_cutout();
