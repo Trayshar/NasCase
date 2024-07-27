@@ -13,29 +13,26 @@ include <vent.scad>;
 include <psu.scad>;
 include <heatsink.scad>;
 include <gpu.scad>;
+include <pcie.scad>;
 include <motherboard.scad>;
 include <power_switch.scad>;
 include <front_panel.scad>;
 
-// Uxcell M3 threaded inserts from Amazon
-insert_r = 5.3/2+0.1;
-insert_h = 5.0;
-
-module motherboard_standoff() {
+module motherboard_standoff(insert_r, insert_h) {
     difference() {
         cylinder(r = (0.4*25.4)/2, h = miniitx_bottom_keepout);
         translate([0, 0, miniitx_bottom_keepout-insert_h]) cylinder(r = insert_r - 0.1, h = insert_h+extra);
     }
 }
 
-module motherboard_standoffs_miniitx() {
+module motherboard_standoffs_miniitx(insert_r, insert_h) {
     $fn = 50;
     
     // Mounting holes for the motherboard
     translate([miniitx_hole_c[0], miniitx_hole_c[1], 0]) {
-        motherboard_standoff();
+        motherboard_standoff(insert_r, insert_h);
         for (hole = [miniitx_hole_f, miniitx_hole_h, miniitx_hole_j]) {
-            translate([hole[0], hole[1], 0]) motherboard_standoff();
+            translate([hole[0], hole[1], 0]) motherboard_standoff(insert_r, insert_h);
         }
     }
 }
@@ -93,6 +90,10 @@ module pci_bracket_holder() {
 
 module pci_bracket_holder_cutout() {
     $fn = 20;
+
+    // Uxcell M3 threaded inserts from Amazon
+    insert_r = 5.3/2+0.1;
+    insert_h = 5.0;
     
     bottom_wall = 1.0;
     
@@ -231,7 +232,10 @@ module traditional(show_body, show_lid, show_internals, heatsink_type, psu_type)
     if (show_body == true) color("WhiteSmoke", 0.5) {
         // Motherboard standoffs taking threaded inserts
         translate([0, 0, -miniitx_bottom_keepout]) {
-            motherboard_standoffs_miniitx();  
+            // Uxcell M3 threaded inserts from Amazon
+            insert_r = 5.3/2+0.1;
+            insert_h = 5.0;
+            motherboard_standoffs_miniitx(insert_r, insert_h);  
         }
         
         // Part that the GPU screws into
@@ -364,5 +368,44 @@ module traditional_tower_cooler() {
     }
 }
 
-traditional(show_body = true, show_lid = false, show_internals = false, heatsink_type = "noctua_nh_l12s", psu_type = "sfx");
+module nas() {
+    // TODO: I don't have an AM4 system; Use correct data for socket
+    motherboard_miniitx(false, am4_holes, am4_socket, 4);
+    translate([am4_holes[0], am4_holes[1], am4_socket[2]+miniitx[2]]) heatsink([60, 71, 20], 2, 15);
+
+    // Network Card
+    lan_card_location = [pci_e_offset[0], pci_e_offset[1], pci_e_offset[2]+miniitx[2]];
+    translate(lan_card_location) {
+        pcie_card(pcb_length = 72.5, pcb_height = 50, low_profile=true);
+    }
+
+    // Motherboard standoffs taking threaded inserts
+    translate([0, 0, -miniitx_bottom_keepout]) {
+        // No inset, direct insertion of #6-32 UNC screw 
+        motherboard_standoffs_miniitx(3.43/2+0.1, 5);
+    }
+    
+    // Part that the GPU screws into
+    translate(lan_card_location) {
+        pcie_bracket_support(true);
+    }
+
+    case_origin = [motherboard_back_edge-wall, -wall+pci_e_offset[1]-20, -miniitx_bottom_keepout-wall];
+    case_size   = [180, 190, 80];
+    difference() {
+        union() {
+            translate([case_origin[0]-2, case_origin[1],     case_origin[2]]) cube([14, 190, 8]);
+            translate([case_origin[0]+8, case_origin[1]+18,  case_origin[2]]) minkowski() { cube([160, 5, 3]); cylinder($fn=32, 1, 8); }
+            translate([case_origin[0]+8, case_origin[1]+175, case_origin[2]]) minkowski() { cube([160, 5, 3]); cylinder($fn=32, 1, 8); }
+            translate([case_origin[0]-0.3, case_origin[1], case_origin[2]+8]) cube([4.3, 190, 50]);
+            translate([case_origin[0]-0.3, case_origin[1], case_origin[2]+58]) cube([4.3, 30, 30]);
+        }
+        
+        motherboard_back_panel_cutout();
+        translate(lan_card_location) pcie_bracket_cutout(low_profile=true);
+    }
+}
+
+nas();
+//traditional(show_body = true, show_lid = false, show_internals = false, heatsink_type = "noctua_nh_l12s", psu_type = "sfx");
 //traditional(show_body = true, show_lid = false, show_internals = true, heatsink_type = "aio", psu_type = "sfx");

@@ -27,9 +27,9 @@ am4_holes = [80, 95, 54, 90]; // Center not measured
 am4_socket = [40, 40, 7.35]; // Not measured
 
 // Offset from origin corner of motherboard to the base of the PCI-e card
-pci_e_offset = [46.94+10.16, 47.29-45.72+6.35, 114.55-111.15];
+pci_e_offset = [42.2 + 14.5, 4 + 7.5/2, 114.55-111.15+miniitx[2]];
 
-module motherboard_miniitx(show_keepouts, socket_holes, socket) {
+module motherboard_miniitx(show_keepouts, socket_holes, socket, pcie_width=16) {
     area_a_keepout = [27, 15, 170-27-30, 170-15, 57];
     area_b_keepout = [0, 0, 170, 15, 16];
     area_c_keepout = [170-30, 15, 30, 170-15, 38];
@@ -69,7 +69,17 @@ module motherboard_miniitx(show_keepouts, socket_holes, socket) {
     
     // PCI-e slot
     color("DarkSlateGray", 1.0) {
-        translate([pci_e_offset[0], pci_e_offset[1], miniitx[2]]) pcie_slot_x(1);
+        translate([pci_e_offset[0], pci_e_offset[1], miniitx[2]]) pcie_slot_x(pcie_width);
+    }
+
+    // IO Panel
+    color("Gray", 1.0) {
+        translate([0, 15, miniitx[2]]) cube([35, 150, 27]);
+    }
+
+    // RAM
+    color("Black", 1.0) {
+        translate([25, 150, miniitx[2]]) cube([143, 6, 45]);
     }
     
     // Keepouts for visualization purposes
