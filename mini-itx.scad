@@ -17,6 +17,7 @@ include <pcie.scad>;
 include <motherboard.scad>;
 include <power_switch.scad>;
 include <front_panel.scad>;
+include <hdd.scad>;
 
 module motherboard_standoff(insert_r, insert_h) {
     difference() {
@@ -368,15 +369,28 @@ module traditional_tower_cooler() {
     }
 }
 
-module nas() {
-    // TODO: I don't have an AM4 system; Use correct data for socket
-    *motherboard_miniitx(false, am4_holes, am4_socket, 4);
-    *translate([am4_holes[0], am4_holes[1], am4_socket[2]+miniitx[2]]) heatsink([60, 71, 20], 2, 15);
-
-    // Network Card
+module nas(show_components=false) {
     lan_card_location = [pci_e_offset[0], pci_e_offset[1], pci_e_offset[2]+miniitx[2]];
-    *translate(lan_card_location) {
-        pcie_card(pcb_length = 72.5, pcb_height = 50, low_profile=true);
+    if (show_components) {
+        // TODO: I don't have an AM4 system; Use correct data for socket
+        motherboard_miniitx(false, am4_holes, am4_socket, 4);
+
+        // Heatsink
+        translate([am4_holes[0], am4_holes[1], am4_socket[2]+miniitx[2]]) heatsink([60, 71, 20], 2, 15);
+
+        // LAN card
+        translate(lan_card_location) pcie_card(pcb_length = 72.5, pcb_height = 50, low_profile=true);
+
+        clearance = 3;
+        // HDD Side
+        translate([miniitx[0]-hdd_l,miniitx[1]+hdd_h+clearance,hdd_w]) rotate([0,90,-90]) hdd_3_5_inch();
+
+        // HDD Top
+        translate([miniitx[0]-hdd_l,1.25*hdd_w,hdd_w-hdd_h]) rotate([0,0,-90]) hdd_3_5_inch();
+
+        // Front Fans
+        translate([miniitx[0]+clearance, 40, 40+10]) rotate([0,90,0]) fan(80, 25, 9);
+        translate([miniitx[0]+clearance, miniitx[1]-40, 40+10]) rotate([0,90,0]) fan(80, 25, 9);
     }
 
     // Motherboard standoffs taking threaded inserts
@@ -407,6 +421,6 @@ module nas() {
     }
 }
 
-nas();
+nas(true);
 //traditional(show_body = true, show_lid = false, show_internals = false, heatsink_type = "noctua_nh_l12s", psu_type = "sfx");
 //traditional(show_body = true, show_lid = false, show_internals = true, heatsink_type = "aio", psu_type = "sfx");
