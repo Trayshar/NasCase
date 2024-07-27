@@ -229,7 +229,7 @@ module traditional(show_body, show_lid, show_internals, heatsink_type, psu_type)
     }
     
     // The actual case
-    if (show_body == true) color("WhiteSmoke", 0.5) {
+    if (show_body == true) color("WhiteSmoke", 1) {
         // Motherboard standoffs taking threaded inserts
         translate([0, 0, -miniitx_bottom_keepout]) {
             // Uxcell M3 threaded inserts from Amazon
@@ -370,12 +370,12 @@ module traditional_tower_cooler() {
 
 module nas() {
     // TODO: I don't have an AM4 system; Use correct data for socket
-    motherboard_miniitx(false, am4_holes, am4_socket, 4);
-    translate([am4_holes[0], am4_holes[1], am4_socket[2]+miniitx[2]]) heatsink([60, 71, 20], 2, 15);
+    *motherboard_miniitx(false, am4_holes, am4_socket, 4);
+    *translate([am4_holes[0], am4_holes[1], am4_socket[2]+miniitx[2]]) heatsink([60, 71, 20], 2, 15);
 
     // Network Card
     lan_card_location = [pci_e_offset[0], pci_e_offset[1], pci_e_offset[2]+miniitx[2]];
-    translate(lan_card_location) {
+    *translate(lan_card_location) {
         pcie_card(pcb_length = 72.5, pcb_height = 50, low_profile=true);
     }
 
@@ -394,10 +394,11 @@ module nas() {
     case_size   = [180, 190, 80];
     difference() {
         union() {
-            translate([case_origin[0]-2, case_origin[1],     case_origin[2]]) cube([14, 190, 8]);
-            translate([case_origin[0]+8, case_origin[1]+18,  case_origin[2]]) minkowski() { cube([160, 5, 3]); cylinder($fn=32, 1, 8); }
-            translate([case_origin[0]+8, case_origin[1]+175, case_origin[2]]) minkowski() { cube([160, 5, 3]); cylinder($fn=32, 1, 8); }
-            translate([case_origin[0]-0.3, case_origin[1], case_origin[2]+8]) cube([4.3, 190, 50]);
+            translate([case_origin[0]-2, case_origin[1],     case_origin[2]]) cube([14, 195, 3]);
+            translate([case_origin[0]+8, case_origin[1]+15,  case_origin[2]]) cube([170, 12, 3]);
+            translate([case_origin[0]+8, case_origin[1]+172, case_origin[2]]) cube([170, 12, 3]);
+            translate([case_origin[0]+166, case_origin[1]+16, case_origin[2]]) cube([12, 166, 3]);
+            translate([case_origin[0]-0.3, case_origin[1], case_origin[2]+3]) cube([4.3, 195, 55]);
             translate([case_origin[0]-0.3, case_origin[1], case_origin[2]+58]) cube([4.3, 30, 30]);
         }
         

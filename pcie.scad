@@ -112,7 +112,7 @@ module pcie_bracket(low_profile = false) {
 
 // Centered on the middle between the two contacts
 module pcie_bracket_cutout(low_profile = false) {
-    padding = 0.1;
+    padding = 0.25;
     // Magic values: See figure 9-5 and 9-9
     w_top = low_profile ? 11.84 : 11.43;
     l_top = low_profile ? 18.59 : 21.59-2.54;
@@ -126,7 +126,7 @@ module pcie_bracket_cutout(low_profile = false) {
     translate(get_bracket_offset(low_profile)) {
         minkowski() {
             pcie_bracket(low_profile);
-            cube([2*padding, 4*padding, 2*padding], true);
+            cube([3*padding, padding, padding], true);
         }
 
         // I/O Cutout
@@ -135,12 +135,12 @@ module pcie_bracket_cutout(low_profile = false) {
         }
         
         // Slot behind the bracket to enable easier mounting
-        translate([-offset_hole_plate_x-0.8, offset_hole_plate_y-4*padding, offset_top_to_io-io_cutout[1]-5.08]) {
-            cube([10, 18.42+8*padding, io_cutout[1] + 20]);
+        translate([-offset_hole_plate_x-1.2, offset_hole_plate_y-2*padding, offset_top_to_io-io_cutout[1]-5.08]) {
+            cube([10, 18.42+3*padding, io_cutout[1] + 20]);
         }
         
         // Slot above the bracket to allow vertical insertion of card
-        translate([-w_top/2, delta_hole_to_outside, 0]) cube([w_top+10, l_top+padding*2, 50]);
+        translate([-w_top/2, delta_hole_to_outside, 0]) cube([w_top+10, l_top+padding, 50]);
     }
 }
 
@@ -153,7 +153,7 @@ module pcie_bracket_support(low_profile = false) {
         insert_h = 5;
         difference() {
             translate([-h_top/2, delta_hole_to_outside+l_top, -0.8/2]) rotate([0, 90, -90]) linear_extrude(l_top) polygon([[0,0], [0,h_top], [h_top, h_top]]);
-            translate([0,0,-insert_h]) #cylinder($fn=16, r = insert_r, h = insert_h);
+            translate([0,0,-insert_h]) cylinder($fn=16, r = insert_r, h = insert_h);
         }
     }
 }
