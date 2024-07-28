@@ -152,11 +152,11 @@ module pcie_bracket_cutout(low_profile = false) {
             offset_hole_plate_y-5*padding,
             offset_top_to_io-io_cutout[1]-5.08/2
         ]) {
-            cube([10, 18.42+10*padding, io_cutout[1] + 20]);
+            cube([10, 18.42+10*padding, io_cutout[1] + 12]);
         }
         
         // Slot above the bracket to allow vertical insertion of card
-        translate([-w_top/2, delta_hole_to_outside, -0.4]) cube([w_top+10, l_top+padding, 50]);
+        translate([-w_top/2, delta_hole_to_outside-4*padding, -0.4]) cube([w_top+10, l_top+8*padding, 12]);
 
         // That dimple. Inner/Outer radius are guessed
         if (low_profile) {
