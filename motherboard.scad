@@ -19,6 +19,14 @@ miniitx_hole_f = [22.86, 157.48];
 miniitx_hole_h = [154.94, 0];
 miniitx_hole_j = [154.94, 157.48];
 
+miniitx_hole_diameter = 3.96; // Alias of miniitx_hole
+miniitx_mounting_holes = [
+    miniitx_hole_c,
+    miniitx_hole_c + miniitx_hole_f,
+    miniitx_hole_c + miniitx_hole_h,
+    miniitx_hole_c + miniitx_hole_j,
+];
+
 // Keepouts on top and bottom of board
 miniitx_bottom_keepout = 0.25 * 25.4;
 
@@ -30,10 +38,6 @@ am4_socket = [40, 40, 7.35]; // Not measured
 pci_e_offset = [42.2 + 14.5, 4 + 7.5/2, 114.55-111.15+miniitx[2]];
 
 module motherboard_miniitx(show_keepouts, socket_holes, socket, pcie_width=16) {
-    area_a_keepout = [27, 15, 170-27-30, 170-15, 57];
-    area_b_keepout = [0, 0, 170, 15, 16];
-    area_c_keepout = [170-30, 15, 30, 170-15, 38];
-    area_d_keepout = [0, 15, 27, 170-15, 39];
     $fn = 20;
     
     difference() {
@@ -84,20 +88,24 @@ module motherboard_miniitx(show_keepouts, socket_holes, socket, pcie_width=16) {
     
     // Keepouts for visualization purposes
     if (show_keepouts == true) {
-         color("GreenYellow", 0.25) {
-            translate([0, 0, -miniitx_bottom_keepout]) cube([miniitx[0], miniitx[1], miniitx_bottom_keepout]);
-            
-            for (keepout = [area_a_keepout, area_b_keepout, area_c_keepout, area_d_keepout]) {
-                translate([keepout[0], keepout[1], miniitx[2]]) {
-                    cube([keepout[2], keepout[3], keepout[4]]);
-                }
-            }
-        }
+        motherboard_miniitx_keepouts();
     }
 }
 
-// The last part I got from testing. Altough 12.27 is in the spec, the IO shield is a bit to far away
-motherboard_back_edge = miniitx_hole_c[0]-12.27+0.8;
+module motherboard_miniitx_keepouts() {
+    color("GreenYellow", 0.25) {
+        // Below Motherboard
+        translate([0, 0, -miniitx_bottom_keepout]) cube([miniitx[0], miniitx[1], miniitx_bottom_keepout]);
+        
+        translate([27, 15, miniitx[2]]) cube([170-27-30, 170-15, 57]); // A: CPU Cooler
+        translate([0, 0, miniitx[2]]) cube([170, 15, 16]); // B: Above PCIe slot
+        translate([170-30, 15, miniitx[2]]) cube([30, 170-15, 38]); // C: RAM
+        translate([0, 15, miniitx[2]]) cube([27, 170-15, 39]); // D: Front IO
+    }
+    
+}
+
+motherboard_back_edge = miniitx_hole_c[0]-12.27;
 
 // Magic numbers: See MiniITX.pdf
 motherboard_back_panel_overhang = 158.75+7.52+6.35-miniitx[1];
