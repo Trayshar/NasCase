@@ -43,24 +43,33 @@ module hdd_3_5_inch() {
     }
 }
 
+hdd_3_5_inch_vertical_thread_pos = [
+    [0,      hdd_a8,          hdd_a10],
+    [0,      hdd_a8 + hdd_a9, hdd_a10],
+    [hdd_a3, hdd_a8 + hdd_a9, hdd_a10],
+    [hdd_a3, hdd_a8,          hdd_a10]
+];
+
 module hdd_3_5_inch_vertical_cutout(tolerance = 0.25) {
     $fn = 16;
-    for (x = [0-tolerance, hdd_a3+tolerance]) {
-        translate([x, hdd_a8, hdd_a10]) {
-            rotate([0, 90, 0]) cylinder(thread_depth+tolerance, thread_diameter/2, thread_diameter/2, center=true);
-            translate([0, hdd_a9, 0]) rotate([0, 90, 0]) cylinder(thread_depth+tolerance, thread_diameter/2, thread_diameter/2, center=true);
-        }
+    for (pos = hdd_3_5_inch_vertical_thread_pos) {
+        translate(pos) rotate([0, 90, 0]) cylinder(thread_depth+tolerance, thread_diameter/2, thread_diameter/2, center=true);
     }
 }
 
+hdd_3_5_inch_bottom_thread_pos = [
+    [hdd_a5,        hdd_a7,           0],
+    [hdd_a5,        hdd_a7 + hdd_a6,  0],
+    [hdd_a5,        hdd_a7 + hdd_a13, 0],
+    [hdd_a3-hdd_a5, hdd_a7,           0],
+    [hdd_a3-hdd_a5, hdd_a7 + hdd_a6,  0],
+    [hdd_a3-hdd_a5, hdd_a7 + hdd_a13, 0],
+];
+
 module hdd_3_5_inch_bottom_cutout(tolerance = 0.25) {
     $fn = 16;
-    for (x = [hdd_a5, hdd_a3-hdd_a5]) {
-        translate([x, hdd_a7, tolerance]) {
-            cylinder(thread_depth+tolerance, thread_diameter/2, thread_diameter/2, center=true);
-            translate([0, hdd_a6, 0]) cylinder(thread_depth+tolerance, thread_diameter/2, thread_diameter/2, center=true);
-            translate([0, hdd_a13, 0]) cylinder(thread_depth+tolerance, thread_diameter/2, thread_diameter/2, center=true);
-        }
+    for (pos = hdd_3_5_inch_bottom_thread_pos) {
+        translate(pos) cylinder(thread_depth+tolerance, thread_diameter/2, thread_diameter/2, center=true);
     }
 }
 
