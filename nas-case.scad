@@ -12,20 +12,7 @@ include <heatsink.scad>;
 include <pcie.scad>;
 include <motherboard.scad>;
 include <hdd.scad>;
-
-module motherboard_standoffs_miniitx(radius=(0.4*25.4)/2) {
-    $fn = 50;
-    for (hole = miniitx_mounting_holes) {
-        translate(hole) cylinder(r = radius, h = miniitx_bottom_keepout);
-    }
-}
-
-module motherboard_standoffs_miniitx_cutout(insert_r, insert_h) {
-    $fn = 50;
-    for (hole = miniitx_mounting_holes) {
-        translate(hole) translate([0, 0, miniitx_bottom_keepout-insert_h]) cylinder(r = insert_r - 0.1, h = insert_h+extra);
-    }
-}
+use <honeycomb.scad>;
 
 // Screws I have laying around
 screw_UNC_6_32 = [8.3/2, 3.2, 3.51/2, 6.4];
@@ -68,7 +55,9 @@ module hdd_dampeners(height=8, diameter=8) {
     color("Black") cylinder(height, diameter/2, diameter/2);
 }
 
-module nas(show_case=true, show_components=false, render_screws=false, show_debug=false) {
+module nas(case_parts=true, show_components=false, render_screws=false, show_debug=false) {
+    render_parts = is_string(case_parts) ? case_parts : "abcdefghijklmnop";
+
     // Config. Change these if you want.
     hdd_dampener_height = 8;
     hdd_dampener_diameter = 8;
@@ -95,7 +84,7 @@ module nas(show_case=true, show_components=false, render_screws=false, show_debu
     cf_offset_back = 1;
     // Additional thickness of the back plate part
     cf_thickness_back = 0;
-    // Thickness of HDD A bracket
+    // Thickness of HDD A bracket. 1.8mm base thichness + height of dampener screw head
     cf_thickness_hdd_a_bracket = 1.8 + hdd_dampener_screw[1];
     // HDD A Bottom side holes that are actually there. See hdd.scad for where those are.
     cf_holes_hdd_a = [0, 1, 3, 4];
@@ -137,27 +126,36 @@ module nas(show_case=true, show_components=false, render_screws=false, show_debu
         ]
     ];
 
-    // Screw helper variables
-    screw_default = [2, 1, 0.5, 6];
-    dir_BACK = [0, 90, 0];
     // Define case screw locations
     screw_offset = 8;
     screw_depth = wall/2;
-    screws = [ // x, y, z, orientation, type.  XYZ are always realtive to the case origin!
+    // Chassis screws. 
+    screws = [ // x, y, z, orientation, type, components_involved.  XYZ are always relative to the case origin!
         // Back: Screws
-        [[wall_b-screw_depth, screw_offset,            screw_offset],               dir_BACK, screw_default],
-        [[wall_b-screw_depth, screw_offset,            -screw_offset+case_size[2]], dir_BACK, screw_default],
-        [[wall_b-screw_depth, -screw_offset+length_ab, screw_offset],               dir_BACK, screw_default],
-        [[wall_b-screw_depth, -screw_offset+length_ab, -screw_offset+case_size[2]], dir_BACK, screw_default],
+        [[wall_b-screw_depth, screw_offset,            screw_offset],               [0, 90, 0], screw_M3_black, "ab"],
+        [[wall_b-screw_depth, screw_offset,            -screw_offset+case_size[2]], [0, 90, 0], screw_M3_black, "bd"],
+        [[wall_b-screw_depth, -screw_offset+length_ab, screw_offset],               [0, 90, 0], screw_M3_black, "ab"],
+        [[wall_b-screw_depth, -screw_offset+length_ab, -screw_offset+case_size[2]], [0, 90, 0], screw_M3_black, "bd"],
         // Back: Screw above IO Shield
-        [[wall_b-screw_depth, length_ab/2,             -screw_offset+case_size[2]], dir_BACK, screw_default],
+        [[wall_b-screw_depth, length_ab/2,             -screw_offset+case_size[2]], [0, 90, 0], screw_M3_black, "bd"],
         // Left: Screws
-        [[-screw_offset+case_size[0], length_ab+screw_depth, screw_offset],               [90, 0, 0], screw_default],
-        [[screw_offset,               length_ab+screw_depth, screw_offset],               [90, 0, 0], screw_default],
-        [[-screw_offset+case_size[0], length_ab+screw_depth, -screw_offset+case_size[2]], [90, 0, 0], screw_default],
-        [[screw_offset,               length_ab+screw_depth, -screw_offset+case_size[2]], [90, 0, 0], screw_default],
-        // Left: HDD Screws are not here, as the are positioned relative to the HDD
+        [[-screw_offset+case_size[0], length_ab+screw_depth, screw_offset],               [90, 0, 0], screw_M3_black, "ac"],
+        [[screw_offset,               length_ab+screw_depth, screw_offset],               [90, 0, 0], screw_M3_black, "ac"],
+        [[-screw_offset+case_size[0], length_ab+screw_depth, -screw_offset+case_size[2]], [90, 0, 0], screw_M3_black, "cd"],
+        [[screw_offset,               length_ab+screw_depth, -screw_offset+case_size[2]], [90, 0, 0], screw_M3_black, "cd"],
     ];
+
+    module impl_screw_cutouts(part) {
+        for (screw_ = screws) {
+            if (search(part, screw_[3])) translate(screw_[0]+case_origin) rotate(screw_[1]) screw_cutout(screw_[2]);
+        }
+    }
+
+    if(render_screws) {
+        for (screw_ = screws) {
+            translate(screw_[0]+case_origin) rotate(screw_[1]) screw(screw_[2]);
+        }
+    }
 
     // Debug stuff
     if (show_debug) {
@@ -181,15 +179,15 @@ module nas(show_case=true, show_components=false, render_screws=false, show_debu
 
         // HDD at the side
         translate(hdd_a_location) rotate([0,90,-90]) {
-            *hdd_3_5_inch();
+            hdd_3_5_inch();
             for (i = cf_holes_hdd_a) {
-                translate(hdd_3_5_inch_bottom_thread_pos[i] - [0,0,cf_thickness_hdd_a_bracket]) screw(screw_UNC_6_32);
+                translate(hdd_3_5_inch_bottom_thread_pos[i] - [0,0,cf_thickness_hdd_a_bracket/2]) screw(screw_UNC_6_32);
             }
             for (pos = hdd_a_dampener_locations) {
                 // Dampeners
                 translate(pos - [0,0,cf_thickness_hdd_a_bracket+hdd_dampener_height]) hdd_dampeners(hdd_dampener_height, hdd_dampener_diameter);
                 // Screw with the chassis
-                translate(pos - [0,0,cf_thickness_hdd_a_bracket+hdd_dampener_height+screw_depth]) screw(hdd_dampener_screw);
+                translate(pos - [0,0,cf_thickness_hdd_a_bracket+hdd_dampener_height+(hdd_dampener_screw[3]-hdd_dampener_thread_depth)]) screw(hdd_dampener_screw);
                 // Screw with the mounting bracket
                 translate(pos - [0,0,hdd_dampener_screw[1]]) rotate([180, 0, 0]) screw(hdd_dampener_screw);
             }
@@ -208,154 +206,176 @@ module nas(show_case=true, show_components=false, render_screws=false, show_debu
         translate(fan_front_b_location) rotate([0,90,0]) fan(fan_definition[0], fan_definition[1], fan_definition[2]);
     }
 
-    if(render_screws) {
-        for (screw_ = screws) {
-            translate(screw_[0]+case_origin) rotate(screw_[1]) screw(screw_[2]);
-        }
-    }
-
     // The actual case
-    if (show_case) {
-        difference() {
-            union() {
-                // ################## Part A: Bottom #####################################
-                color("yellow") {
-                    // Base plate
-                    translate([case_origin[0]+wall_b, case_origin[1], case_origin[2]]) cube([case_size[0]-wall_b, length_ab, wall]);
-                    // Connection structure for B,G
-                    *translate([case_origin[0]+wall_b, case_origin[1]+wall, case_origin[2]+wall]) {
-                        rotate([90, 0, 0]) translate([0, 0, wall-cf_space_right]) linear_extrude(cf_space_right-wall) polygon([[0,0], [0, 35], [25, 0]]);
-                    }
-                    // Connection structure for B,C
-                    *translate([case_origin[0]+wall_b, case_origin[1]+length_ab, case_origin[2]+wall]) {
-                        rotate([90, 0, 0]) linear_extrude(cf_space_right) polygon([[0,0], [0, 35], [25, 0]]);
-                    }
-                    // Mainboard standoffs
-                    translate([0, 0, -miniitx_bottom_keepout]) motherboard_standoffs_miniitx();
-                }
 
-                // ################## Part B: Backside ###################################
-                color("blue") {
-                    // The main plate
-                    translate([case_origin[0], case_origin[1], case_origin[2]]) cube([wall_b, length_ab, case_size[2]]);
-                    // Part that the GPU screws into
-                    translate(lan_card_location) pcie_bracket_support(true);
-                } 
-
-                // ################## Part C: Side with HDD at the side ##################
-                color("orange") difference() {
-                    union() {
-                        translate([case_origin[0], case_origin[1]+length_ab, case_origin[2]]) cube([case_size[0], case_size[1]-length_ab, wall]);
-                        translate([case_origin[0], case_origin[1]+case_size[1]-wall, case_origin[2]]) cube([case_size[0], wall, case_size[2]]);
-                        translate([case_origin[0], case_origin[1]+length_ab, case_origin[2]]) cube([wall_b, case_size[1]-length_ab, case_size[2]]);
-                        translate([case_origin[0], case_origin[1]+length_ab, case_origin[2]+case_size[2]-wall]) cube([case_size[0], case_size[1]-length_ab, wall]);
-                        translate([case_origin[0]+case_size[0]-wall, case_origin[1]+case_size[1]-wall-length_c, case_origin[2]+wall]) cube([wall, length_c, case_size[2]-2*wall]);
-                        // Connection structure for A
-                        *translate([case_origin[0]+wall_b, case_origin[1]+case_size[1]-wall, case_origin[2]+wall]) {
-                            rotate([90, 0, 0]) linear_extrude(case_size[1]-length_ab-wall) polygon([[0,0], [0, 35], [25, 0]]);
-                        }
-                        // Connection structure for D
-                        *translate([case_origin[0]+wall_b, case_origin[1]+case_size[1]-wall, case_origin[2]+case_size[2]-wall-35]) {
-                            rotate([90, 0, 0]) linear_extrude(case_size[1]-length_ab-wall) polygon([[0,0], [0, 35], [25, 35]]);
-                        }
-
-                        // Connection structure for A,D,F
-                        *translate([case_origin[0]+case_size[0]-wall-15, case_origin[1]+case_size[1]-wall-(case_size[1]-length_ab-wall), case_origin[2]+wall]) {
-                            cube([15, case_size[1]-length_ab-wall, case_size[2]-2*wall]);
-                        }
-                    }
-                    // Cutouts for HDD Mounting Bracket (Part J)
-                    translate(hdd_a_location) rotate([0,90,-90]) {
-                        for (pos = hdd_a_dampener_locations) {
-                            translate(pos - [0,0,cf_thickness_hdd_a_bracket+hdd_dampener_height+screw_depth]) screw_cutout(hdd_dampener_screw);
-                        }
-                    }
-                }
-
-                // ################## Part D: Top ########################################
-                color("purple") {
-                    // Base plate
-                    translate([case_origin[0]+wall_b, case_origin[1], case_origin[2]+case_size[2]-wall]) cube([case_size[0]-wall_b, length_ab, wall]);
-                    // Connection structure for B,C
-                    *translate([case_origin[0]+wall_b, case_origin[1]+length_ab, case_origin[2]+case_size[2]-wall-35]) {
-                        rotate([90, 0, 0]) linear_extrude(case_size[1]-length_ab-wall) polygon([[0,0], [0, 35], [25, 35]]);
-                    }
-                    // Connection structure for B,G
-                    tmp_support_height = 14;
-                    *translate([case_origin[0]+wall_b, case_origin[1]+wall, case_origin[2]+case_size[2]-wall-tmp_support_height]) {
-                        linear_extrude(tmp_support_height) polygon([[0,0], [0, 35-wall], [25, 0]]);
-                    }
-                    // Connection structure for B in the middle
-                    tmp_width = 40;
-                    *translate([case_origin[0]+wall_b, case_origin[1]+length_ab/2+tmp_width/2, case_origin[2]+case_size[2]-wall-tmp_support_height]) {
-                        rotate([90, 0, 0]) linear_extrude(tmp_width) polygon([[0,0], [0, tmp_support_height], [25, tmp_support_height]]);
-                    }
-                }
-                // ################## Part F: Front ######################################
-                // ################## Part G: Side with Front Panel ######################
-                // ################## Part H: Internal Top HDD Bracket ###################
-                // ################## Part I: Internal Fan Mount #########################
-                color("#2596be") {
-                    // This is cursed...
-                    translate([miniitx[0]+cf_clearance_fans_mb+fan_definition[1], miniitx[1]/2, case_origin[2]+case_size[2]/2]) {
-                        // The inner structure that covers the fans
-                        rotate([0, 90, 0]) linear_extrude(wall) for(y_sign = [-1, 1]) {
-                            translate([0, y_sign*((miniitx[1]-2*fan_definition[0])/2+fan_definition[0]/2), 0]) offset($fn=20, r=-wall) union() {
-                                for(angle = [45, -45]) {
-                                    rotate(angle) square([(wall+fan_definition[0])*sqrt(2), 4*wall], center=true);
-                                }
-                            }
-                        }
-                        // the outer border
-                        for(i = [-1, 1]) {
-                            translate([wall/2, 0, i*fan_definition[0]/2]) cube([wall, miniitx[1]+wall, wall], center=true);
-                            translate([wall/2, i*miniitx[1]/2, 0]) cube([wall, wall, fan_definition[0]+wall], center=true);
-                        }
-                        translate([wall/2,0,0]) cube([wall, (miniitx[1]-2*fan_definition[0])+wall, fan_definition[0]+wall], center=true);
-                    }
-                    translate([case_origin[0]+case_size[0]-wall-0.75*cf_space_right, case_origin[1]+wall, case_origin[2]+wall]) cube([0.75*cf_space_right, 0.75*cf_space_right, case_size[2]-2*wall]);
-                }
-                // ################## Part J: Internal Side HDD Bracket ##################
-                color("navy") {
-                    translate(hdd_a_location) rotate([0,90,-90]) difference() { 
-                        $fn=50;
-                        // This encodes the holes to use. Each pair is one connection between holes.
-                        union() {
-                            for(pairs = [[0,1], [3,4], [0,4], [1,3], [0,3], [1,4]]) {
-                                hull() {
-                                    translate(hdd_3_5_inch_bottom_thread_pos[pairs[0]]-[0,0,cf_thickness_hdd_a_bracket]) cylinder(h = cf_thickness_hdd_a_bracket, r = 3.5);
-                                    translate(hdd_3_5_inch_bottom_thread_pos[pairs[1]]-[0,0,cf_thickness_hdd_a_bracket]) cylinder(h = cf_thickness_hdd_a_bracket, r = 3.5);
-                                }
-                            }
-                            translate(hdd_3_5_inch_bottom_thread_pos[0]-[0,0,cf_thickness_hdd_a_bracket]) 
-                                cube([14, hdd_3_5_inch_bottom_thread_pos[1].y-hdd_3_5_inch_bottom_thread_pos[0].y, cf_thickness_hdd_a_bracket]); 
-                            translate(hdd_3_5_inch_bottom_thread_pos[3]-[14,0,cf_thickness_hdd_a_bracket]) 
-                                cube([14, hdd_3_5_inch_bottom_thread_pos[4].y-hdd_3_5_inch_bottom_thread_pos[3].y, cf_thickness_hdd_a_bracket]); 
-                        }
-                        // Cutouts for HDD screws, inset such that the screw has good connection to the HDD
-                        for (i=cf_holes_hdd_a) translate(hdd_3_5_inch_bottom_thread_pos[i] - [0, 0, cf_thickness_hdd_a_bracket/2]) screw_cutout(screw_UNC_6_32);
-                        // Cutouts for dampener screws, inset such that the head is fully covered
-                        for (pos = hdd_a_dampener_locations) translate(pos - [0, 0, hdd_dampener_screw[1]]) rotate([180, 0, 0]) screw_cutout(hdd_dampener_screw);
-                        // Cutouts such that we do not print unnecessary stuff. Centered on the middle of the part
-                        *translate((hdd_3_5_inch_bottom_thread_pos[1]+hdd_3_5_inch_bottom_thread_pos[3])/2) {
-                            translate([0, 0, -hdd_dampener_screw[1]]) cylinder(h=hdd_dampener_screw[1]+0.001, r1=0, r2=32);
-                        }
-                    }
-                }
+    // ################## Part A: Bottom #####################################
+    if (search("a", render_parts)) color("yellow") difference() {
+        union() {
+            // Base plate
+            translate([case_origin[0]+wall_b, case_origin[1], case_origin[2]]) cube([case_size[0]-wall_b, length_ab, wall]);
+            // Connection structure for B,G
+            *translate([case_origin[0]+wall_b, case_origin[1]+wall, case_origin[2]+wall]) {
+                rotate([90, 0, 0]) translate([0, 0, wall-cf_space_right]) linear_extrude(cf_space_right-wall) polygon([[0,0], [0, 35], [25, 0]]);
             }
-            
-            motherboard_back_panel_cutout();
-            translate(lan_card_location) pcie_bracket_cutout(low_profile=true);
-
-            // No inset, direct insertion of #6-32 UNC screw 
-            translate([0, 0, -miniitx_bottom_keepout]) motherboard_standoffs_miniitx_cutout(3.43/2+0.1, 6.25);
-
-            // Add screw cutouts
-            for (screw_ = screws) {
-                translate(screw_[0]+case_origin) rotate(screw_[1]) screw_cutout(screw_[2][0], screw_[2][1], screw_[2][2], screw_[2][3]);
+            // Connection structure for B,C
+            *translate([case_origin[0]+wall_b, case_origin[1]+length_ab, case_origin[2]+wall]) {
+                rotate([90, 0, 0]) linear_extrude(cf_space_right) polygon([[0,0], [0, 35], [25, 0]]);
+            }
+            // Mainboard standoffs
+            translate([0, 0, -miniitx_bottom_keepout]) for (hole = miniitx_mounting_holes) {
+                translate(hole) cylinder(r = 0.2*25.4, h = miniitx_bottom_keepout, $fn = 50);
             }
         }
+        // Mainboard standoff screw cutin
+        for (hole = miniitx_mounting_holes) {
+            translate(hole) rotate([0, 180, 0]) screw_cutout(screw_M3_black);
+        }
+
+        // Chassis screw cutouts
+        impl_screw_cutouts("a");
     }
+
+    // ################## Part B: Backside ###################################
+    if (search("b", render_parts)) color("blue") difference() {
+        union() {
+            // The main plate
+            translate([case_origin[0], case_origin[1], case_origin[2]]) cube([wall_b, length_ab, case_size[2]]);
+            // Part that the GPU screws into
+            translate(lan_card_location) pcie_bracket_support(true);
+        }
+        motherboard_back_panel_cutout();
+        translate(lan_card_location) pcie_bracket_cutout(low_profile=true);
+
+        // Hexagonal cutout
+        l=34;
+        ofs_w=4;
+        translate([case_origin[0]-0.1, miniitx_hole_c[1]+7.52-ofs_w/2, 52]) {
+            // #cube([wall_b+0.2, motherboard_back_panel_size[0]+ofs_w, l]);
+            translate([0,0,l]) rotate([0, 90, 0]) linear_extrude(wall_b+0.2) {
+                honeycomb_cutout(l,motherboard_back_panel_size[0]+ofs_w, 5, 1, true);
+            }
+        }
+
+        // Chassis screw cutouts
+        impl_screw_cutouts("b");
+    } 
+
+    // ################## Part C: Side with HDD at the side ##################
+    if (search("c", render_parts)) color("orange") difference() {
+        union() {
+            translate([case_origin[0], case_origin[1]+length_ab, case_origin[2]]) cube([case_size[0], case_size[1]-length_ab, wall]);
+            translate([case_origin[0], case_origin[1]+case_size[1]-wall, case_origin[2]]) cube([case_size[0], wall, case_size[2]]);
+            translate([case_origin[0], case_origin[1]+length_ab, case_origin[2]]) cube([wall_b, case_size[1]-length_ab, case_size[2]]);
+            translate([case_origin[0], case_origin[1]+length_ab, case_origin[2]+case_size[2]-wall]) cube([case_size[0], case_size[1]-length_ab, wall]);
+            translate([case_origin[0]+case_size[0]-wall, case_origin[1]+case_size[1]-wall-length_c, case_origin[2]+wall]) cube([wall, length_c, case_size[2]-2*wall]);
+            // Connection structure for A
+            *translate([case_origin[0]+wall_b, case_origin[1]+case_size[1]-wall, case_origin[2]+wall]) {
+                rotate([90, 0, 0]) linear_extrude(case_size[1]-length_ab-wall) polygon([[0,0], [0, 35], [25, 0]]);
+            }
+            // Connection structure for D
+            *translate([case_origin[0]+wall_b, case_origin[1]+case_size[1]-wall, case_origin[2]+case_size[2]-wall-35]) {
+                rotate([90, 0, 0]) linear_extrude(case_size[1]-length_ab-wall) polygon([[0,0], [0, 35], [25, 35]]);
+            }
+
+            // Connection structure for A,D,F
+            *translate([case_origin[0]+case_size[0]-wall-15, case_origin[1]+case_size[1]-wall-(case_size[1]-length_ab-wall), case_origin[2]+wall]) {
+                cube([15, case_size[1]-length_ab-wall, case_size[2]-2*wall]);
+            }
+        }
+        // Cutouts for HDD Mounting Bracket (Part J)
+        translate(hdd_a_location) rotate([0,90,-90]) {
+            for (pos = hdd_a_dampener_locations) {
+                translate(pos - [0,0,cf_thickness_hdd_a_bracket+hdd_dampener_height+(hdd_dampener_screw[3]-hdd_dampener_thread_depth)]) screw_cutout(hdd_dampener_screw);
+            }
+        }
+        
+        // Chassis screw cutouts
+        impl_screw_cutouts("c");
+    }
+
+    // ################## Part D: Top ########################################
+    if (search("d", render_parts)) color("purple") difference() {
+        union() {
+            // Base plate
+            translate([case_origin[0]+wall_b, case_origin[1], case_origin[2]+case_size[2]-wall]) cube([case_size[0]-wall_b, length_ab, wall]);
+            // Connection structure for B,C
+            *translate([case_origin[0]+wall_b, case_origin[1]+length_ab, case_origin[2]+case_size[2]-wall-35]) {
+                rotate([90, 0, 0]) linear_extrude(case_size[1]-length_ab-wall) polygon([[0,0], [0, 35], [25, 35]]);
+            }
+            // Connection structure for B,G
+            tmp_support_height = 14;
+            *translate([case_origin[0]+wall_b, case_origin[1]+wall, case_origin[2]+case_size[2]-wall-tmp_support_height]) {
+                linear_extrude(tmp_support_height) polygon([[0,0], [0, 35-wall], [25, 0]]);
+            }
+            // Connection structure for B in the middle
+            tmp_width = 40;
+            *translate([case_origin[0]+wall_b, case_origin[1]+length_ab/2+tmp_width/2, case_origin[2]+case_size[2]-wall-tmp_support_height]) {
+                rotate([90, 0, 0]) linear_extrude(tmp_width) polygon([[0,0], [0, tmp_support_height], [25, tmp_support_height]]);
+            }
+        }
+
+        // Chassis screw cutouts
+        impl_screw_cutouts("d");
+    }
+    // ################## Part F: Front ######################################
+    // ################## Part G: Side with Front Panel ######################
+    // ################## Part H: Internal Top HDD Bracket ###################
+    // ################## Part I: Internal Fan Mount #########################
+    if (search("i", render_parts)) color("#2596be") difference() {
+        union() {
+            // This is cursed...
+            translate([miniitx[0]+cf_clearance_fans_mb+fan_definition[1], miniitx[1]/2, case_origin[2]+case_size[2]/2]) {
+                // The inner structure that covers the fans
+                rotate([0, 90, 0]) linear_extrude(wall) for(y_sign = [-1, 1]) {
+                    translate([0, y_sign*((miniitx[1]-2*fan_definition[0])/2+fan_definition[0]/2), 0]) offset($fn=20, r=-wall) union() {
+                        for(angle = [45, -45]) {
+                            rotate(angle) square([(wall+fan_definition[0])*sqrt(2), 4*wall], center=true);
+                        }
+                    }
+                }
+                // the outer border
+                for(i = [-1, 1]) {
+                    translate([wall/2, 0, i*fan_definition[0]/2]) cube([wall, miniitx[1]+wall, wall], center=true);
+                    translate([wall/2, i*miniitx[1]/2, 0]) cube([wall, wall, fan_definition[0]+wall], center=true);
+                }
+                translate([wall/2,0,0]) cube([wall, (miniitx[1]-2*fan_definition[0])+wall, fan_definition[0]+wall], center=true);
+            }
+            translate([case_origin[0]+case_size[0]-wall-0.75*cf_space_right, case_origin[1]+wall, case_origin[2]+wall]) cube([0.75*cf_space_right, 0.75*cf_space_right, case_size[2]-2*wall]);
+        }
+        // Chassis screw cutouts
+        impl_screw_cutouts("i");
+    }
+    // ################## Part J: Internal Side HDD Bracket ##################
+    if (search("j", render_parts)) color("navy") {
+        translate(hdd_a_location) rotate([0,90,-90]) difference() { 
+            $fn=50;
+            // This encodes the holes to use. Each pair is one connection between holes.
+            union() {
+                for(pairs = [[0,1], [3,4], [0,4], [1,3], [0,3], [1,4]]) {
+                    hull() {
+                        translate(hdd_3_5_inch_bottom_thread_pos[pairs[0]]-[0,0,cf_thickness_hdd_a_bracket]) cylinder(h = cf_thickness_hdd_a_bracket, r = 3.5);
+                        translate(hdd_3_5_inch_bottom_thread_pos[pairs[1]]-[0,0,cf_thickness_hdd_a_bracket]) cylinder(h = cf_thickness_hdd_a_bracket, r = 3.5);
+                    }
+                }
+                translate(hdd_3_5_inch_bottom_thread_pos[0]-[0,0,cf_thickness_hdd_a_bracket]) 
+                    cube([14, hdd_3_5_inch_bottom_thread_pos[1].y-hdd_3_5_inch_bottom_thread_pos[0].y, cf_thickness_hdd_a_bracket]); 
+                translate(hdd_3_5_inch_bottom_thread_pos[3]-[14,0,cf_thickness_hdd_a_bracket]) 
+                    cube([14, hdd_3_5_inch_bottom_thread_pos[4].y-hdd_3_5_inch_bottom_thread_pos[3].y, cf_thickness_hdd_a_bracket]); 
+            }
+            // Cutouts for HDD screws, inset such that the screw has good connection to the HDD
+            for (i=cf_holes_hdd_a) translate(hdd_3_5_inch_bottom_thread_pos[i] - [0, 0, cf_thickness_hdd_a_bracket/2]) screw_cutout(screw_UNC_6_32);
+            // Cutouts for dampener screws, inset such that the head is fully covered
+            for (pos = hdd_a_dampener_locations) translate(pos - [0, 0, hdd_dampener_screw[1]]) rotate([180, 0, 0]) screw_cutout(hdd_dampener_screw);
+            // Cutouts such that we do not print unnecessary stuff. Centered on the middle of the part
+            *translate((hdd_3_5_inch_bottom_thread_pos[1]+hdd_3_5_inch_bottom_thread_pos[3])/2) {
+                translate([0, 0, -hdd_dampener_screw[1]]) cylinder(h=hdd_dampener_screw[1]+0.001, r1=0, r2=32);
+            }
+
+            // Chassis screw cutouts
+            impl_screw_cutouts("j");
+        }
+    }
+
 }
 
-nas(true, true, true);
+nas("abdj", true, true);
