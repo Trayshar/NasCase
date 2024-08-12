@@ -21,10 +21,10 @@ miniitx_hole_j = [154.94, 157.48];
 
 miniitx_hole_diameter = 3.96; // Alias of miniitx_hole
 miniitx_mounting_holes = [
-    miniitx_hole_c,
-    miniitx_hole_c + miniitx_hole_f,
-    miniitx_hole_c + miniitx_hole_h,
-    miniitx_hole_c + miniitx_hole_j,
+    [miniitx_hole_c.x, miniitx_hole_c.y, 0],
+    [miniitx_hole_c.x + miniitx_hole_f.x, miniitx_hole_c.y + miniitx_hole_f.y, 0],
+    [miniitx_hole_c.x + miniitx_hole_h.x, miniitx_hole_c.y + miniitx_hole_h.y, 0],
+    [miniitx_hole_c.x + miniitx_hole_j.x, miniitx_hole_c.y + miniitx_hole_j.y, 0]
 ];
 
 // Keepouts on top and bottom of board
