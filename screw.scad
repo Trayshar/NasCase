@@ -1,9 +1,9 @@
 // Some screw stuff
 
-module screw(top_r=2, top_h=1, thread_r=0.5, thread_h=4) {
+module render_screw(top_r=2, top_h=1, thread_r=0.5, thread_h=4) {
     // Handle passing all params as array
     if(is_list(top_r) && len(top_r) >= 4) {
-        screw(top_r[0], top_r[1], top_r[2], top_r[3]);
+        render_screw(top_r[0], top_r[1], top_r[2], top_r[3]);
     } else {
         assert(is_num(top_r) && is_num(top_h) && is_num(thread_r) && is_num(thread_h), "Incorrect types!");
         // Actual module begins here
@@ -30,6 +30,34 @@ module screw_cutout(top_r=2, top_h=1, thread_r=0.5, thread_h=4, chamfer_r=0.5, c
         translate([0, 0, -0.001]) cylinder(h = chamfer_h, r1 = chamfer_r+0.001, r2 = thread_r+0.001);
         translate([0, 0, -0.001-chamfer_h]) cylinder(h = thread_h*1.1-chamfer_h, r = thread_r+0.001);
         translate([0, 0, -top_h*50+0.001]) cylinder(h = top_h*50, r = 1.25*top_r);
+    }
+}
+
+module render_insert(height=5.7, radius=2.3, inner_thread_radius=1.5) {
+    // Handle passing all params as array
+    if(is_list(height) && len(height) >= 3) {
+        render_insert(height[0], height[1], height[2]);
+    } else {
+        assert(is_num(height) && is_num(radius) && is_num(inner_thread_radius), "Incorrect types!");
+        // Actual module begins here
+        $fn = 50;
+        color("Gold") difference() {
+            cylinder(h=height, r=radius);
+            translate([0, 0, -0.0001]) cylinder(h=height+0.0002, r=inner_thread_radius);
+        }
+    }
+}
+
+module insert_cutout(height=5.7, radius=2.3) {
+    // Handle passing all params as array
+    if(is_list(height) && len(height) >= 5) {
+        // Assume [h, r, inner_thread_r, cutout_h, cutout_r]
+        insert_cutout(height[3], height[4]);
+    } else {
+        assert(is_num(height) && is_num(radius), "Incorrect types!");
+        // Actual module begins here
+        $fn = 50;
+        cylinder(h=height, r=radius);
     }
 }
 

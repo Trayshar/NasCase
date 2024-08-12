@@ -19,25 +19,27 @@ use <screw.scad>;
 screw_UNC_6_32 = [8.3/2, 3.2, 3.51/2, 6.4];
 screw_M3_silver = [3, 2, 1.5, 4];
 screw_M3_black = [7/2, 1.6, 1.5, 5];
-screw_M3_long = [3, 2, 1.5, 10];
+screw_M3_long = [3, 2, 1.5, 8];
 screw_Fan = [5.5/2, 0.25, 3/2, 8, 5.5/2, 1.5];
 screw_Plasfast = [5.6/2, 2.1, 3/2*0.86, 10, 3/2+0.1, 2];
 
+// Some M3 inserts I brought on amazon
+M3_insert = [5.7, 4.6/2, 1.5, 6, 4.8/2]; // 5.7mm height, 4.6mm diameter, M3 thread, 6mm cutout height, 4.7mm cutout diameter
+
 // The vibration dampeners I have left from some other project
 module hdd_dampeners(height=8, diameter=8) {
-    color("Black") cylinder(height, diameter/2, diameter/2);
+    color("Black") cylinder(h=height, d=diameter);
 }
 
-module nas(case_parts=true, show_components=false, render_screws=false, show_debug=false) {
+module nas(case_parts=true, show_components=false, render_screws=false, render_inserts=false, show_debug=false) {
     render_parts = is_string(case_parts) ? case_parts : "abcdefghijklmnop";
 
     // Config. Change these if you want.
     hdd_dampener_height = 8;
     hdd_dampener_diameter = 8;
     hdd_dampener_thread_depth = 2.9;
-    fan_definition = [80, 25, 9];
-
     hdd_dampener_screw = screw_M3_black;
+    fan_definition = [80, 25, 9];
 
     // Additional space in the direction perpendicular to the PCIe slot
     cf_space_right = 16;
@@ -105,30 +107,37 @@ module nas(case_parts=true, show_components=false, render_screws=false, show_deb
     screw_offset_b = 8;
     screw_offset_d_x = 10;
     screw_offset_d_z = 16;
-    screw_depth = wall/2;
-    // Chassis screws. 
-    screws = [ // x, y, z, orientation, type, components_involved.  XYZ are always relative to the case origin!
+    
+    // Screw+Insert+Cutouts table
+    // Fields: position, orientation, screw_type, components_involved, insert_type, insert_offset
+    // - 0: position is always relative to the case origin!
+    // - 1: orientation applied after position!
+    // - 2: screw_type is [head_r, head_h, thread_r, thread_h, (cutout_chamfer_r, cutout_chamfer_h)]
+    // - 3: components_involved is a string, each letter encoding whether cutouts must be applied
+    // - 4: insert_type defines which insert is to be used, [height, radius, inner_thread_r, cutout_height, cutout_radius]. undef => no insert
+    // - 5: insert_offset defines how far (along the screw thread) the insert is located. undef => no insert
+    screws = [
         // Bottom (part a): Mainboard Screws
-        [miniitx_mounting_holes[0] + [0,0,pcb_thickness] - case_origin, [0, 180, 0], screw_M3_black, "a"],
-        [miniitx_mounting_holes[1] + [0,0,pcb_thickness] - case_origin, [0, 180, 0], screw_M3_black, "a"],
-        [miniitx_mounting_holes[2] + [0,0,pcb_thickness] - case_origin, [0, 180, 0], screw_M3_black, "a"],
-        [miniitx_mounting_holes[3] + [0,0,pcb_thickness] - case_origin, [0, 180, 0], screw_M3_black, "a"],
+        [miniitx_mounting_holes[0] + [0,0,pcb_thickness] - case_origin, [0, 180, 0], screw_M3_black, "a", M3_insert, pcb_thickness],
+        [miniitx_mounting_holes[1] + [0,0,pcb_thickness] - case_origin, [0, 180, 0], screw_M3_black, "a", M3_insert, pcb_thickness],
+        [miniitx_mounting_holes[2] + [0,0,pcb_thickness] - case_origin, [0, 180, 0], screw_M3_black, "a", M3_insert, pcb_thickness],
+        [miniitx_mounting_holes[3] + [0,0,pcb_thickness] - case_origin, [0, 180, 0], screw_M3_black, "a", M3_insert, pcb_thickness],
         // Back (part b): Screws
-        [[wall_b-screw_depth, screw_offset_b,            screw_offset_b],               [0, 90, 0], screw_M3_long, "ab"],
-        [[wall_b-screw_depth, screw_offset_b,            -screw_offset_b+case_size[2]], [0, 90, 0], screw_M3_long, "bd"],
-        [[wall_b-screw_depth, -screw_offset_b+length_ab, screw_offset_b],               [0, 90, 0], screw_M3_long, "ab"],
-        [[wall_b-screw_depth, -screw_offset_b+length_ab, -screw_offset_b+case_size[2]], [0, 90, 0], screw_M3_long, "bd"],
+        [[wall_b/4, screw_offset_b,            screw_offset_b],               [0, 90, 0], screw_M3_long, "ab", M3_insert, wall_b*0.75],
+        [[wall_b/4, screw_offset_b,            -screw_offset_b+case_size[2]], [0, 90, 0], screw_M3_long, "bd", M3_insert, wall_b*0.75],
+        [[wall_b/4, -screw_offset_b+length_ab, screw_offset_b],               [0, 90, 0], screw_M3_long, "ab", M3_insert, wall_b*0.75],
+        [[wall_b/4, -screw_offset_b+length_ab, -screw_offset_b+case_size[2]], [0, 90, 0], screw_M3_long, "bd", M3_insert, wall_b*0.75],
         // Back (part b): Screw above IO Shield
-        [[wall_b-screw_depth, length_ab/2,               -screw_offset_b+case_size[2]], [0, 90, 0], screw_M3_long, "bd"],
+        [[wall_b/4, length_ab/2,               -screw_offset_b+case_size[2]], [0, 90, 0], screw_M3_long, "bd", M3_insert, wall_b*0.75],
         // Left (part c): Screws
-        [[-screw_offset_d_x+case_size[0], length_ab+screw_M3_long[3]/2, screw_offset_d_z],               [90, 0, 0], screw_M3_long, "ac"],
-        [[screw_offset_d_x,               length_ab+screw_M3_long[3]/2, screw_offset_d_z],               [90, 0, 0], screw_M3_long, "ac"],
-        [[-screw_offset_d_x+case_size[0], length_ab+screw_M3_long[3]/2, -screw_offset_d_z+case_size[2]], [90, 0, 0], screw_M3_long, "cd"],
-        [[screw_offset_d_x,               length_ab+screw_M3_long[3]/2, -screw_offset_d_z+case_size[2]], [90, 0, 0], screw_M3_long, "cd"],
+        [[-screw_offset_d_x+case_size[0], length_ab+screw_M3_long[3]/2, screw_offset_d_z],               [90, 0, 0], screw_M3_long, "ac", M3_insert, screw_M3_long[3]/2],
+        [[screw_offset_d_x,               length_ab+screw_M3_long[3]/2, screw_offset_d_z],               [90, 0, 0], screw_M3_long, "ac", M3_insert, screw_M3_long[3]/2],
+        [[-screw_offset_d_x+case_size[0], length_ab+screw_M3_long[3]/2, -screw_offset_d_z+case_size[2]], [90, 0, 0], screw_M3_long, "cd", M3_insert, screw_M3_long[3]/2],
+        [[screw_offset_d_x,               length_ab+screw_M3_long[3]/2, -screw_offset_d_z+case_size[2]], [90, 0, 0], screw_M3_long, "cd", M3_insert, screw_M3_long[3]/2],
         // Front (part i): Connections to right (part g)
-        [[case_size[0]-wall-size_i[0]+screw_M3_long[3]/2, wall+size_i[1]/2, case_size[2]/2], [0, 270, 0], screw_M3_long, "ig"],
+        [[case_size[0]-wall-size_i[0]+screw_M3_long[3]/2, wall+size_i[1]/2, case_size[2]/2], [0, 270, 0], screw_M3_long, "ig", M3_insert, screw_M3_long[3]/2],
         // Front (part i): Connections to left (part c)
-        [[case_size[0]-wall-size_i[0]+screw_M3_long[3]/2, length_ab-length_c/2, case_size[2]/2], [0, 270, 0], screw_M3_long, "ic"],
+        [[case_size[0]-wall-size_i[0]+screw_M3_long[3]/2, length_ab-length_c/2, case_size[2]/2], [0, 270, 0], screw_M3_long, "ic", M3_insert, screw_M3_long[3]/2],
         // Front (part i): Fan screws
         [fan_front_a_location - case_origin + [fan_definition[1]+wall_i, hole_spacing(80)/2,   hole_spacing(80)/2], [0, 270, 0], screw_Fan, "i"],
         [fan_front_a_location - case_origin + [fan_definition[1]+wall_i, -hole_spacing(80)/2,  hole_spacing(80)/2], [0, 270, 0], screw_Fan, "i"],
@@ -141,14 +150,33 @@ module nas(case_parts=true, show_components=false, render_screws=false, show_deb
     ];
 
     module impl_screw_cutouts(part) {
-        for (screw_ = screws) {
-            if (search(part, screw_[3])) translate(screw_[0]+case_origin) rotate(screw_[1]) screw_cutout(screw_[2]);
+        // Iterate all screws, ignore those that do not contain part in component string
+        for (screw_ = screws) if (search(part, screw_[3])) {
+            // Translate + orient screw
+            translate(screw_[0]+case_origin) rotate(screw_[1]) {
+                // Add cutout for screw
+                screw_cutout(screw_[2]);
+                // Check if we have an insert for this screw
+                if(!is_undef(screw_[4]) && !is_undef(screw_[5])) {
+                    // Move to insert position (minus epsilon to ensure smooth rendering) and add cutout
+                    translate([0, 0, screw_[5]-0.0001]) insert_cutout(screw_[4]);
+                    // Print warning if insert is not deep enough: Thread_h-insert_offset-insert_h > 0
+                    if(screw_[2][3] - screw_[5] - screw_[4][0] > 0)
+                        echo(str("Warning - Insert not deep enough (by " , screw_[2][3] - screw_[5] - screw_[4][0], "mm): "), screw_);
+                }
+            }
         }
     }
 
     if(render_screws) {
         for (screw_ = screws) {
-            translate(screw_[0]+case_origin) rotate(screw_[1]) screw(screw_[2]);
+            translate(screw_[0]+case_origin) rotate(screw_[1]) render_screw(screw_[2]);
+        }
+    }
+
+    if(render_inserts) {
+        for (screw_ = screws) if(!is_undef(screw_[4]) && !is_undef(screw_[5])) {
+            translate(screw_[0]+case_origin) rotate(screw_[1]) translate([0, 0, screw_[5]]) render_insert(screw_[4]);
         }
     }
 
@@ -176,15 +204,15 @@ module nas(case_parts=true, show_components=false, render_screws=false, show_deb
         translate(hdd_a_location) rotate([0,90,-90]) {
             hdd_3_5_inch();
             for (i = cf_holes_hdd_a) {
-                translate(hdd_3_5_inch_bottom_thread_pos[i] - [0,0,cf_thickness_hdd_a_bracket/2]) screw(screw_UNC_6_32);
+                translate(hdd_3_5_inch_bottom_thread_pos[i] - [0,0,cf_thickness_hdd_a_bracket/2]) render_screw(screw_UNC_6_32);
             }
             for (pos = hdd_a_dampener_locations) {
                 // Dampeners
                 translate(pos - [0,0,cf_thickness_hdd_a_bracket+hdd_dampener_height]) hdd_dampeners(hdd_dampener_height, hdd_dampener_diameter);
                 // Screw with the chassis
-                translate(pos - [0,0,cf_thickness_hdd_a_bracket+hdd_dampener_height+(hdd_dampener_screw[3]-hdd_dampener_thread_depth)]) screw(hdd_dampener_screw);
+                translate(pos - [0,0,cf_thickness_hdd_a_bracket+hdd_dampener_height+(hdd_dampener_screw[3]-hdd_dampener_thread_depth)]) render_screw(hdd_dampener_screw);
                 // Screw with the mounting bracket
-                translate(pos - [0,0,hdd_dampener_screw[1]]) rotate([180, 0, 0]) screw(hdd_dampener_screw);
+                translate(pos - [0,0,hdd_dampener_screw[1]]) rotate([180, 0, 0]) render_screw(hdd_dampener_screw);
             }
         }
         
@@ -192,7 +220,7 @@ module nas(case_parts=true, show_components=false, render_screws=false, show_deb
         translate(hdd_b_location) rotate([0,0,-90]) {
             hdd_3_5_inch();
             for (pos = hdd_3_5_inch_vertical_thread_pos) {
-                translate(pos) rotate([0, 90 * (pos[0] > 0 ? -1 : 1), 0]) translate([0, 0, -wall]) screw(screw_UNC_6_32);
+                translate(pos) rotate([0, 90 * (pos[0] > 0 ? -1 : 1), 0]) translate([0, 0, -wall]) render_screw(screw_UNC_6_32);
             }
         }
         
@@ -202,7 +230,7 @@ module nas(case_parts=true, show_components=false, render_screws=false, show_deb
     }
 
     // ################## Part A: Bottom #####################################
-    if (search("a", render_parts)) color("yellow") difference() {
+    if (search("a", render_parts)) color("tan") difference() {
         union() {
             // Base plate
             translate([case_origin[0]+wall_b, case_origin[1], case_origin[2]]) cube([case_size[0]-wall_b, length_ab, wall]);
@@ -311,6 +339,23 @@ module nas(case_parts=true, show_components=false, render_screws=false, show_deb
         impl_screw_cutouts("d");
     }
     // ################## Part F: Front ######################################
+    if (search("i", render_parts)) color("white") difference() {
+        union() {
+            translate([miniitx[0]+cf_clearance_fans_mb+fan_definition[1]+2*wall_i, 0, case_origin[2]+4*wall]) {
+                cube([wall_i, 180, case_size[2]-8*wall]);
+            }
+        }
+
+        // Hexagonal cutout
+        translate([miniitx[0]+cf_clearance_fans_mb+fan_definition[1]+3*wall_i+0.001, 0, case_origin[2]+4*wall]) {
+            rotate([0, -90, 0]) linear_extrude(wall_i+0.002) {
+                honeycomb_cutout(case_size[2]-8*wall, 180, 5, 1, true);
+            }
+        }
+
+        // Chassis screw cutouts
+        impl_screw_cutouts("f");
+    }
     // ################## Part G: Side near PCIe slot ########################
     if (search("g", render_parts)) color("lime") difference() {
         union() {
@@ -376,4 +421,4 @@ module nas(case_parts=true, show_components=false, render_screws=false, show_deb
 
 }
 
-nas("cbdefij", false, true, false);
+nas("abcdefghijk", false, true, true, false);
