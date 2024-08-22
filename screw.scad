@@ -61,11 +61,24 @@ module insert_cutout(height=5.7, radius=2.3) {
     }
 }
 
-// Test measurements
+// Test measurements of Plasfast/M3
 screw_Plasfast = [5.6/2, 2.1, 3/2*0.86, 10, 3/2+0.1, 2];
 screw_M3_black = [7/2, 1.6, 1.5, 5];
 
-difference() {
+*difference() {
     translate([-5, -5, 0]) cube([10,10,6]);
     translate([0, 0, 5]) rotate([0, 180, 0]) screw_cutout(screw_Plasfast);
+}
+
+M3_insert = [5.7, 4.6/2, 1.5, 5.85, 4/2]; // 5.7mm height, 4.6mm diameter, M3 thread, 6mm cutout height, 4mm cutout diameter
+M3_insert_padding = [0, 0, 0, 0, 0.2];
+c=3;
+o=7.5;
+h = 8;
+difference() {
+    cube([o*c, o, h]);
+    for (i = [0:c])  {
+        spec = M3_insert+M3_insert_padding; 
+        translate([o/2+o*i, o/2, h-spec[3] + 0.001]) #insert_cutout(spec);
+    }
 }
