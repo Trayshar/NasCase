@@ -24,7 +24,7 @@ screw_Fan = [5.5/2, 0.25, 3/2, 8, 5.5/2, 1.5];
 screw_Plasfast = [5.6/2, 2.1, 3/2*0.86, 10, 3/2+0.1, 2];
 
 // Some M3 inserts I brought on amazon
-M3_insert = [5.7, 4.6/2, 1.5, 5.85, 4/2]; // 5.7mm height, 4.6mm diameter, M3 thread, 6mm cutout height, 4mm cutout diameter
+M3_insert = [5.7, 4.6/2, 1.5, 5.85, 4/2]; // 5.7mm height, 4.6mm diameter, M3 thread, 5.85mm cutout height, 4mm cutout diameter
 M3_insert_padding = [0, 0, 0, 0, 0.2]; // Makes the cutout a bit larger. I noticed my printer makes the holes to narrow if I print them parallel to the layers
 
 // The vibration dampeners I have left from some other project
@@ -66,6 +66,8 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
     cf_clearance_hdd_a_mb = 3;
     // Distance between the case and the side HDD
     cf_clearance_hdd_a_case = 3;
+    // Distance between the case and the top HDD
+    cf_clearance_hdd_b = 1;
     // Offset along the back-front-axis of the side HDD
     cf_offset_hdd_a = 12;
     // Horizontal position of the top HDD
@@ -76,6 +78,8 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
     cf_offset_IO_inlet_g = 60;
     // Thickness of the inner walls of the IO inlet (part g)
     cf_thickness_inner_walls_IO_inlet_g = wall;
+    // Thickness of the inner walls of the Top HDD bracket (part e)
+    cf_thickness_inner_walls_e = 3;
     // Additional thickness of the back plate part
     cf_thickness_back = 3.5-wall;
     // Thickness of HDD A bracket. 1.8mm base thichness + height of dampener screw head
@@ -109,13 +113,15 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
     // Derived positions of all components. DO NOT CHANGE
     lan_card_location = [pci_e_offset[0],  pci_e_offset[1],    pci_e_offset[2]+miniitx[2]];
     hdd_a_location = [miniitx[0]-hdd_l+cf_offset_hdd_a, hdd_h+miniitx[1]+cf_clearance_hdd_a_mb, hdd_w-(miniitx_bottom_keepout-cf_clearance_hdd_a_case)];
-    hdd_b_location = [miniitx[0]-hdd_l, hdd_w+cf_offset_hdd_b,                  hdd_w-(miniitx_bottom_keepout-cf_clearance_hdd_a_case)-hdd_h];
+    hdd_b_location = [miniitx[0]-hdd_l, hdd_w+cf_offset_hdd_b, case_origin[2]+case_size[2] - hdd_h - wall - cf_clearance_hdd_b];
     fan_front_a_location = [miniitx[0]+cf_clearance_fans_mb, 40,            case_size[2]/2+case_origin[2]];
     fan_front_b_location = [miniitx[0]+cf_clearance_fans_mb, miniitx[1]-40, case_size[2]/2+case_origin[2]];
     io_inlet_g_location = case_origin + [case_size[0]/2 - cf_size_IO_inlet_g[3]/2 + cf_offset_IO_inlet_g, 0, case_size[2]/2];
     length_ab = 210;
     length_c = 0;
     length_c_connection_structure = (case_origin[0]+case_size[0]-wall)-(hdd_a_location[0]+hdd_l+cf_clearance_hdd_a_case);
+    delta_e_d = (case_origin[2] + case_size[2] - wall) - hdd_b_location[2];
+    height_e = delta_e_d - hdd_dampener_height - M3_insert[0];
     thickness_f = cf_thickness_fan_bracket + fan_filter_size[0];
     hdd_a_dampener_locations = [
         for (i = cf_holes_hdd_a) [ 
@@ -201,11 +207,41 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
         for (screw_ = screws) {
             translate(screw_[0]+case_origin) rotate(screw_[1]) render_screw(screw_[2]);
         }
+        // HDD at the side
+        translate(hdd_a_location) rotate([0,90,-90]) {
+            for (i = cf_holes_hdd_a) {
+                translate(hdd_3_5_inch_bottom_thread_pos[i] - [0,0,cf_thickness_hdd_a_bracket/2]) render_screw(screw_UNC_6_32);
+            }
+            for (pos = hdd_a_dampener_locations) {
+                // Screw with the chassis
+                translate(pos - [0,0,cf_thickness_hdd_a_bracket+hdd_dampener_height+(hdd_dampener_screw[3]-hdd_dampener_thread_depth)]) render_screw(hdd_dampener_screw);
+                // Screw with the mounting bracket
+                translate(pos - [0,0,hdd_dampener_screw[1]]) rotate([180, 0, 0]) render_screw(hdd_dampener_screw);
+            }
+        }
+        
+        // HDD at the top
+        translate(hdd_b_location) rotate([0,0,-90]) {
+            for (pos = hdd_3_5_inch_vertical_thread_pos) {
+                translate(pos) rotate([0, 90 * (pos[0] > 0 ? -1 : 1), 0]) translate([0, 0, -cf_thickness_inner_walls_e/2]) render_screw(screw_UNC_6_32);
+                // Screws to Dampener
+                translate(pos - [(cf_thickness_inner_walls_e/2 + screw_UNC_6_32[1] + screw_M3_black[0]*1.25) * (pos[0] > 0 ? -1 : 1), 0, (screw_M3_black[3]-hdd_dampener_thread_depth)-height_e/2]) rotate([0, 0, 90]) render_screw(screw_M3_black);
+            }
+
+        }
     }
 
     if(render_inserts) {
         for (screw_ = screws) if(!is_undef(screw_[4]) && !is_undef(screw_[5])) {
             translate(screw_[0]+case_origin) rotate(screw_[1]) translate([0, 0, screw_[5]]) render_insert(screw_[4]);
+        }
+
+        // Inserts for part E
+        translate(hdd_b_location) rotate([0,0,-90]) {
+            for (pos = hdd_3_5_inch_vertical_thread_pos) translate(pos) {
+                si = (pos[0] > 0 ? -1 : 1);
+                translate([(cf_thickness_inner_walls_e/2 + screw_UNC_6_32[1] + screw_M3_black[0]*1.25) * -1 * si, 0, height_e-hdd_a10+hdd_dampener_height]) render_insert(M3_insert);
+            }
         }
     }
 
@@ -232,27 +268,21 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
         // HDD at the side
         translate(hdd_a_location) rotate([0,90,-90]) {
             hdd_3_5_inch();
-            for (i = cf_holes_hdd_a) {
-                translate(hdd_3_5_inch_bottom_thread_pos[i] - [0,0,cf_thickness_hdd_a_bracket/2]) render_screw(screw_UNC_6_32);
-            }
-            for (pos = hdd_a_dampener_locations) {
-                // Dampeners
-                translate(pos - [0,0,cf_thickness_hdd_a_bracket+hdd_dampener_height]) hdd_dampeners(hdd_dampener_height, hdd_dampener_diameter);
-                // Screw with the chassis
-                translate(pos - [0,0,cf_thickness_hdd_a_bracket+hdd_dampener_height+(hdd_dampener_screw[3]-hdd_dampener_thread_depth)]) render_screw(hdd_dampener_screw);
-                // Screw with the mounting bracket
-                translate(pos - [0,0,hdd_dampener_screw[1]]) rotate([180, 0, 0]) render_screw(hdd_dampener_screw);
-            }
+            // Dampeners
+            for (pos = hdd_a_dampener_locations) translate(pos - [0,0,cf_thickness_hdd_a_bracket+hdd_dampener_height]) 
+                hdd_dampeners(hdd_dampener_height, hdd_dampener_diameter);
         }
         
         // HDD at the top
         translate(hdd_b_location) rotate([0,0,-90]) {
             hdd_3_5_inch();
-            for (pos = hdd_3_5_inch_vertical_thread_pos) {
-                translate(pos) rotate([0, 90 * (pos[0] > 0 ? -1 : 1), 0]) translate([0, 0, -wall]) render_screw(screw_UNC_6_32);
+            // Dampeners to Part E
+            for (pos = hdd_3_5_inch_vertical_thread_pos) translate(pos) {
+                si = (pos[0] > 0 ? -1 : 1);
+                translate([(cf_thickness_inner_walls_e/2 + screw_UNC_6_32[1] + screw_M3_black[0]*1.25) * -1 * si, 0, height_e-hdd_a10]) hdd_dampeners(hdd_dampener_height, hdd_dampener_diameter);
             }
         }
-        
+
         // Front Fans
         translate(fan_front_a_location) rotate([0,90,0]) fan(fan_definition[0], fan_definition[1], fan_definition[2]);
         translate(fan_front_b_location) rotate([0,90,0]) fan(fan_definition[0], fan_definition[1], fan_definition[2]);
@@ -275,20 +305,20 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
             translate([case_origin[0]+wall_b, case_origin[1]+wall, case_origin[2]]) {
                 _a = cf_space_right-wall-d_pcie_cutout;
                 _b = cf_space_right-wall;
-                rotate([90, 0, 0]) translate([0, 0, -_a]) linear_extrude(_a) polygon([[0,0], [0, 36],    [36, 0]]);
-                rotate([90, 0, 0]) translate([0, 0, -_b]) linear_extrude(_b) polygon([[0,0], [0, 18.37], [36, 0]]);
+                rotate([90, 0, 0]) translate([0, 0, -_a]) slope([36, 36, _a]);
+                rotate([90, 0, 0]) translate([0, 0, -_b]) slope([36, 18.37, _b]);
             }
             // Connection structure for B,C
             translate([case_origin[0]+wall_b, case_origin[1]+length_ab, case_origin[2]]) {
-                rotate([90, 0, 0]) linear_extrude(cf_space_right) polygon([[0,0], [0, 36], [25, 0]]);
+                rotate([90, 0, 0]) slope([25, 36, cf_space_right]);
             }
-            // Connection structure for C
+            // Connection structure for C,F
             translate([case_origin[0]+case_size[0]-wall, case_origin[1]+length_ab, case_origin[2]]) {
-                rotate([90, 0, 270]) linear_extrude(length_c_connection_structure) polygon([[0,0], [0, 36], [25, 0]]);
+                rotate([90, 0, 270]) slope([25, 36, length_c_connection_structure]);
             }
             // Connection structure for F
             translate([case_origin[0]+case_size[0]-wall-cf_size_front_pillar[0], case_origin[1]+wall, case_origin[2]]) {
-                rotate([90, 0, 180]) linear_extrude(cf_size_front_pillar[1]) polygon([[0,0], [0, 36], [25, 0]]);
+                rotate([90, 0, 180]) slope([25, 36, cf_size_front_pillar[1]]);
             }
             // Mainboard standoffs
             translate([0, 0, -miniitx_bottom_keepout-wall]) for (hole = miniitx_mounting_holes) {
@@ -364,18 +394,44 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
             // Base plate
             translate([case_origin[0]+wall_b, case_origin[1], case_origin[2]+case_size[2]-wall]) cube([case_size[0]-wall_b, length_ab, wall]);
             // Connection structure for B,C
-            translate([case_origin[0]+wall_b, case_origin[1]+length_ab, case_origin[2]+case_size[2]-wall-35]) {
-                rotate([90, 0, 0]) linear_extrude(case_size[1]-length_ab-wall) polygon([[0,0], [0, 35], [25, 35]]);
+            translate(case_origin + [wall_b, length_ab, case_size[2]-wall]) {
+                rotate([0, 90, 270]) slope([36, 25, case_size[1]-length_ab-wall]);
             }
             // Connection structure for B,G
             tmp_support_height = 14;
-            translate([case_origin[0]+wall_b, case_origin[1]+wall, case_origin[2]+case_size[2]-wall-tmp_support_height]) {
-                linear_extrude(tmp_support_height) polygon([[0,0], [0, 35-wall], [25, 0]]);
+            translate(case_origin + [wall_b, wall, case_size[2]-wall-tmp_support_height]) {
+                slope([25, 35-wall, tmp_support_height]);
             }
             // Connection structure for B in the middle
             tmp_width = 40;
-            translate([case_origin[0]+wall_b, case_origin[1]+length_ab/2+tmp_width/2, case_origin[2]+case_size[2]-wall-tmp_support_height]) {
-                rotate([90, 0, 0]) linear_extrude(tmp_width) polygon([[0,0], [0, tmp_support_height], [25, tmp_support_height]]);
+            translate(case_origin + [wall_b, length_ab/2-tmp_width/2, case_size[2]-wall]) {
+                rotate([180, 0, 90]) beveled_cube(tmp_width, 25, tmp_support_height, 32, 5);
+            }
+
+            // Connection structure for E 
+            translate(hdd_b_location) rotate([0,0,-90]) {
+                for (pos = hdd_3_5_inch_vertical_thread_pos) translate(pos) {
+                    si = (pos[0] > 0 ? -1 : 1);
+                    translate([(cf_thickness_inner_walls_e/2 + screw_UNC_6_32[1] + screw_M3_black[0]*1.25) * -1 * si, 0, height_e-hdd_a10+hdd_dampener_height]) cylinder(h=M3_insert[0], r=6);
+                }
+            }
+
+            // Connection structure for C,F
+            translate(case_origin + [case_size[0]-wall, length_ab, case_size[2]-wall]) {
+                rotate([90, 90, 270]) slope([36, 25, length_c_connection_structure]);
+            }
+
+            // Connection structure for F, G
+            translate(case_origin + [case_size[0]-wall-cf_size_front_pillar[0], wall, case_size[2]-wall]) {
+                rotate([180, 90, 270]) slope([36, 25, cf_size_front_pillar[1]]);
+            }
+        }
+
+        // Cutouts for part e
+        translate(hdd_b_location) rotate([0,0,-90]) {
+            for (pos = hdd_3_5_inch_vertical_thread_pos) translate(pos) {
+                si = (pos[0] > 0 ? -1 : 1);
+                translate([(cf_thickness_inner_walls_e/2 + screw_UNC_6_32[1] + screw_M3_black[0]*1.25) * -1 * si, 0, height_e-hdd_a10+hdd_dampener_height]) insert_cutout(M3_insert);
             }
         }
 
@@ -383,6 +439,26 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
         impl_screw_cutouts("d");
     }
     // ################## Part E: Internal Top HDD Bracket ###################
+    if (search("e", render_parts)) color("IndianRed") translate(hdd_b_location) rotate([0,0,-90]) difference() {
+        union() {
+            for (pos = hdd_3_5_inch_vertical_thread_pos) translate(pos) {
+                si = (pos[0] > 0 ? -1 : 1);
+                translate(-[cf_thickness_inner_walls_e/2 * si, 0, hdd_a10-height_e/2]) {
+                    cube([cf_thickness_inner_walls_e, 12, height_e], center=true);
+                    translate([(si*-14-cf_thickness_inner_walls_e)/2, 0, (height_e-cf_thickness_inner_walls_e)/2]) cube([14, 12, cf_thickness_inner_walls_e], center=true); 
+                }
+            }
+        }
+
+        // Screws
+        for (pos = hdd_3_5_inch_vertical_thread_pos) {
+            si = (pos[0] > 0 ? -1 : 1);
+            // Screws of HDD
+            translate(pos) rotate([0, 90 * si, 0]) translate([0, 0, -cf_thickness_inner_walls_e/2]) screw_cutout(screw_UNC_6_32- [0.5,0,0,0]);
+            // Screws to Dampener
+            translate(pos - [(cf_thickness_inner_walls_e/2 + screw_UNC_6_32[1] + screw_M3_black[0]*1.25) * si, 0, (screw_M3_black[3]-hdd_dampener_thread_depth)-height_e/2]) rotate([0, 0, 90]) screw_cutout(screw_M3_black);
+        }
+    }
     // ################## Part F: Internal Front with Fan mount ##############
     if (search("f", render_parts)) color("#2596be") difference() {
         union() {
@@ -518,4 +594,4 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
     }
 }
 
-nas("de", true, false, true, false);
+nas("d", false, false, false, false);
