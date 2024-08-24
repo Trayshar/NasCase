@@ -32,6 +32,13 @@ module hdd_dampeners(height=8, diameter=8) {
     color("Black") cylinder(h=height, d=diameter);
 }
 
+module power_button(length_body=9, diameter_body=6.35, length_button=4.45+3.18, diameter_button=2.69) {
+    $fn=32;
+    color("Silver") translate([0, 0, -length_body]) cylinder(h=length_body, d=diameter_body);
+    color("black") cylinder(h=length_button, d=diameter_button);
+}
+
+
 module nas(case_parts=true, show_components=false, render_screws=false, render_inserts=false, show_debug=false) {
     render_parts = is_string(case_parts) ? case_parts : "abcdefghijklmnop";
 
@@ -47,6 +54,8 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
     cf_space_right = 16;
     // length(x), width(y) of front pillar (part f)
     cf_size_front_pillar = [10, 10];
+    // Size of the IO inlet on the right side (g): [length, depth, height, outer_length, outer_height]
+    cf_size_IO_inlet_g = [20, 8, 20, 30, 24];
     // Additional space in the direction where the front fans are
     cf_space_front_h = (cf_size_front_pillar[1]+wall)/2;
     // Distance between the outer edge of the fan and the inner fan duct (of the fan)
@@ -63,6 +72,10 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
     cf_offset_hdd_b = (miniitx[1]-hdd_w)/2;
     // Offset of the back plate relative to the mainboard IO position
     cf_offset_back = 1;
+    // Offset of the IO inlet on the right side (g) along the x axis
+    cf_offset_IO_inlet_g = 60;
+    // Thickness of the inner walls of the IO inlet (part g)
+    cf_thickness_inner_walls_IO_inlet_g = wall;
     // Additional thickness of the back plate part
     cf_thickness_back = 3.5-wall;
     // Thickness of HDD A bracket. 1.8mm base thichness + height of dampener screw head
@@ -99,6 +112,7 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
     hdd_b_location = [miniitx[0]-hdd_l, hdd_w+cf_offset_hdd_b,                  hdd_w-(miniitx_bottom_keepout-cf_clearance_hdd_a_case)-hdd_h];
     fan_front_a_location = [miniitx[0]+cf_clearance_fans_mb, 40,            case_size[2]/2+case_origin[2]];
     fan_front_b_location = [miniitx[0]+cf_clearance_fans_mb, miniitx[1]-40, case_size[2]/2+case_origin[2]];
+    io_inlet_g_location = case_origin + [case_size[0]/2 - cf_size_IO_inlet_g[3]/2 + cf_offset_IO_inlet_g, 0, case_size[2]/2];
     length_ab = 210;
     length_c = 0;
     length_c_connection_structure = (case_origin[0]+case_size[0]-wall)-(hdd_a_location[0]+hdd_l+cf_clearance_hdd_a_case);
@@ -138,6 +152,8 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
         [[wall_b/4, -screw_offset_b+length_ab, -screw_offset_b+case_size[2]], [0, 90, 0], screw_M3_long, "bd", M3_insert, wall_b*0.75],
         // Back (part b): Screw above IO Shield
         [[wall_b/4, length_ab/2,               -screw_offset_b+case_size[2]], [0, 90, 0], screw_M3_long, "bd", M3_insert, wall_b*0.75],
+        // Back (part b): Screw to right side piece (g)
+        [[wall_b/4, 5,                         case_size[2]/2],               [0, 90, 0], screw_M3_long, "bg", M3_insert, wall_b*0.75],
         // Left (part c): Screws
         [[-screw_offset_d_x+case_size[0], length_ab+screw_M3_long[3]/2, screw_offset_d_z],               [90, 0, 0], screw_M3_long, "ac", M3_insert, screw_M3_long[3]/2],
         [[screw_offset_d_x,               length_ab+screw_M3_long[3]/2, screw_offset_d_z],               [90, 0, 0], screw_M3_long, "ac", M3_insert, screw_M3_long[3]/2],
@@ -244,6 +260,9 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
         // Fan filters
         translate(fan_front_a_location + [fan_definition[1]+cf_thickness_fan_bracket+fan_filter_size[0]/2,0,0]) color("white", 0.5) cube(fan_filter_size, center=true);
         translate(fan_front_b_location + [fan_definition[1]+cf_thickness_fan_bracket+fan_filter_size[0]/2,0,0]) color("white", 0.5) cube(fan_filter_size, center=true);
+
+        // Power button
+        translate(io_inlet_g_location + [0, cf_size_IO_inlet_g[1]/2, 0]) rotate([0, 90, 0]) power_button(); 
     }
 
     // ################## Part A: Bottom #####################################
@@ -413,8 +432,33 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
     if (search("g", render_parts)) color("lime") difference() {
         union() {
             // Base plate
-            translate([case_origin[0]+wall, case_origin[1], case_origin[2]+wall]) cube([case_size[0]-wall-cf_space_front_h, wall, case_size[2]-2*wall]);
+            translate(case_origin + [wall_b, 0, wall]) cube([case_size[0]-wall_b-cf_space_front_h, wall, case_size[2]-2*wall]);
+        
+            // Inlet and connection to F
+            _wall_g = cf_thickness_inner_walls_IO_inlet_g;
+            _size_g = [
+                (case_origin[0]+case_size[0]-cf_size_front_pillar[0]-wall) - io_inlet_g_location[0] + _wall_g, 
+                cf_size_front_pillar[1], 
+                cf_size_IO_inlet_g[4]+2*_wall_g
+            ];
+            translate(case_origin + [case_size[0]-cf_size_front_pillar[0]-wall, wall, case_size[2]/2+_size_g[2]/2]) rotate([-90, 90, 0]) 
+                beveled_cube(_size_g[2], _size_g[0]+_wall_g, _size_g[1], cf_size_IO_inlet_g[2], _size_g[0], cf_size_IO_inlet_g[1] + _wall_g - wall);
+
+            // Connection structure to B
+            translate(case_origin + [wall_b, 0, case_size[2]/2-30/2]) rotate([-90, -90, 0]) beveled_cube(30, 20, wall+6, 24, 8);
+
+
+
+            // Connection structure to F
+            *translate(case_origin + [case_size[0]-cf_size_front_pillar[0]-wall, 0, case_size[2]/2+30/2]) rotate([-90, 90, 0]) beveled_cube(30, 20, wall+cf_size_front_pillar[1], 24, 8);
+            // Larger version of the IO inlet
+            *translate(io_inlet_g_location - [_wall_g, 0, cf_size_IO_inlet_g[4]/2+_wall_g]) rotate([-90, -90, 0]) resize([cf_size_IO_inlet_g[4]+2*_wall_g, cf_size_IO_inlet_g[3]+2*_wall_g, cf_size_IO_inlet_g[2]+wall_g]) beveled_cube(cf_size_IO_inlet_g[4], cf_size_IO_inlet_g[3], cf_size_IO_inlet_g[1], cf_size_IO_inlet_g[2], cf_size_IO_inlet_g[0]);
         }
+
+        translate(io_inlet_g_location - [0, 0.0005, cf_size_IO_inlet_g[4]/2]) rotate([-90, -90, 0]) beveled_cube(cf_size_IO_inlet_g[4], cf_size_IO_inlet_g[3], cf_size_IO_inlet_g[1], cf_size_IO_inlet_g[2], cf_size_IO_inlet_g[0]);
+
+        // Power button
+        translate(io_inlet_g_location + [0.0001, cf_size_IO_inlet_g[1]/2, 0]) rotate([0, 90, 0]) power_button(); 
 
         // Chassis screw cutouts
         impl_screw_cutouts("g");
@@ -474,4 +518,4 @@ module nas(case_parts=true, show_components=false, render_screws=false, render_i
     }
 }
 
-nas("a", false, false, false, false);
+nas("de", true, false, true, false);
