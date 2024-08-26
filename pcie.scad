@@ -117,7 +117,7 @@ module pcie_bracket(low_profile = false) {
 
 
 // Centered on the middle between the two contacts
-module pcie_bracket_cutout(low_profile = false) {
+module pcie_bracket_cutout(low_profile = false, clearance_above=18) {
     padding = 0.25;
     // Magic values: See figure 9-5 and 9-9
     w_top = low_profile ? 11.84 : 11.43;
@@ -156,7 +156,7 @@ module pcie_bracket_cutout(low_profile = false) {
         }
         
         // Slot above the bracket to allow vertical insertion of card
-        translate([-w_top/2, delta_hole_to_outside-4*padding, -0.4]) cube([w_top+10, l_top+8*padding, 12]);
+        translate([-w_top/2, delta_hole_to_outside-4*padding, -0.4]) cube([w_top+10, l_top+8*padding, clearance_above]);
 
         // That dimple. Inner/Outer radius are guessed
         if (low_profile) {
