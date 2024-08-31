@@ -75,10 +75,16 @@ M3_insert_padding = [0, 0, 0, 0, 0.2];
 c=3;
 o=7.5;
 h = 8;
-difference() {
+*difference() {
     cube([o*c, o, h]);
     for (i = [0:c])  {
         spec = M3_insert+M3_insert_padding; 
         translate([o/2+o*i, o/2, h-spec[3] + 0.001]) #insert_cutout(spec);
     }
+}
+
+screw_Fan =    [5.5/2, 0.25, 1.5+0.6, 8, 5.5/2+0.4, 1.5];
+difference() {
+    translate([-6, -6, 0]) cube([12,12,1.8]);
+    translate([0, 0, 1.8]) rotate([0, 180, 0]) screw_cutout(screw_Fan);
 }
